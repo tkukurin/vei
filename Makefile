@@ -1,6 +1,7 @@
 SHELL := /bin/bash
 PYTHON ?= python3.11
-UV ?= uv
+# if you want to use uv, set `UV = uv`
+UV ?=
 VENV ?= .venv
 MODE ?= $(or $(AGENT_MODE),baseline)
 AGENTS_FILE := .agents.yml
