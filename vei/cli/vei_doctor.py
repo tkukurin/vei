@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import socket
 import sys
 from dataclasses import asdict, dataclass
@@ -167,7 +168,8 @@ def _env_file_check(env_path: Path) -> DoctorCheck:
 
 
 def _env_key_check(env_values: dict[str, str], key: str) -> DoctorCheck:
-    if key in env_values and env_values[key].strip():
+    value = env_values.get(key, "").strip() or os.environ.get(key, "").strip()
+    if value:
         return DoctorCheck(
             name=key.lower(),
             status="ok",
@@ -177,8 +179,8 @@ def _env_key_check(env_values: dict[str, str], key: str) -> DoctorCheck:
     return DoctorCheck(
         name=key.lower(),
         status="warning",
-        message=f"{key} is missing.",
-        fix=f"Add `{key}=...` to `.env` before running `make llm-live` or `vei llm-test run`.",
+        message=f"{key} is missing from .env and environment.",
+        fix=f"Add `{key}=...` to `.env` or export it in your shell before running `make llm-live` or `vei llm-test run`.",
     )
 
 
