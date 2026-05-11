@@ -1,5 +1,6 @@
 SHELL := /bin/bash
 PYTHON ?= python3.11
+UV ?= uv
 VENV ?= .venv
 MODE ?= $(or $(AGENT_MODE),baseline)
 AGENTS_FILE := .agents.yml
@@ -14,12 +15,10 @@ PIPAPI_PYTHON := $(abspath $(VENV_BIN)/python)
 .PHONY: setup bootstrap setup-full check check-full test test-full dynamics-eval codex-live-smoke worldmodel-smoke public-demo-smoke workflow-intel-smoke fetch-public-history-fixture-shrink llm-live deps-audit enron-example service-ops-example dispatch-local-example enron-screens fetch-enron-full package-enron-full all clean clean-workspace clean-workspace-dry-run clean-workspace-hard clean-workspace-hard-dry-run
 
 $(VENV)/bin/activate:
-	$(PYTHON) -m venv $(VENV)
+	$(UV) venv --python $(PYTHON) $(VENV)
 
 $(SETUP_STAMP): $(VENV)/bin/activate pyproject.toml
-	. $(VENV)/bin/activate && \
-		pip install --upgrade pip "setuptools<82" wheel && \
-		pip install -e ".[$(SETUP_EXTRAS)]"
+	$(UV) pip install --python $(VENV_BIN)/python -e ".[$(SETUP_EXTRAS)]"
 	@if [ -f .pre-commit-config.yaml ]; then \
 		$(VENV_BIN)/pre-commit install --install-hooks || \
 			echo "Skipping pre-commit install; hooks are managed elsewhere."; \
@@ -30,8 +29,7 @@ setup bootstrap: $(SETUP_STAMP)
 	@echo "Virtual environment ready at $(VENV)"
 
 $(SETUP_FULL_STAMP): $(SETUP_STAMP) pyproject.toml
-	. $(VENV)/bin/activate && \
-		pip install -e ".[$(SETUP_FULL_EXTRAS)]"
+	$(UV) pip install --python $(VENV_BIN)/python -e ".[$(SETUP_FULL_EXTRAS)]"
 	@touch $(SETUP_FULL_STAMP)
 
 setup-full: $(SETUP_FULL_STAMP)
