@@ -19,7 +19,6 @@ from vei.playable import (
     render_playable_overview,
     start_workspace_mission_run,
 )
-from vei.whatif.filenames import CONTEXT_SNAPSHOT_FILE
 from vei.workspace.api import create_workspace_from_template
 
 
@@ -319,16 +318,6 @@ def test_prepare_playable_workspace_creates_full_bundle(tmp_path: Path) -> None:
     assert state.status == "running"
     assert (root / "playable_manifest.json").exists()
     assert (root / "fidelity_report.json").exists()
-
-
-def test_prepare_playable_workspace_produces_context_snapshot(tmp_path: Path) -> None:
-    root = tmp_path / "prepared"
-    prepare_playable_workspace(
-        root,
-        world="real_estate_management",
-        mission="tenant_opening_conflict",
-    )
-    assert (root / CONTEXT_SNAPSHOT_FILE).exists()
 
 
 def test_activate_playable_mission_refreshes_bundle_and_fidelity(

@@ -12,7 +12,6 @@ from vei.benchmark import get_benchmark_family_workflow_spec
 from vei.blueprint.api import create_world_session_from_blueprint
 from vei.capability_graph.api import CapabilityGraphActionInput
 from vei.contract.api import ContractEvaluationResult
-from vei.context.api import ContextSnapshot, write_canonical_history_sidecars
 from vei.fidelity import (
     build_workspace_fidelity_report,
     get_or_build_workspace_fidelity_report,
@@ -41,7 +40,6 @@ from vei.verticals import (
     prepare_vertical_story,
     VerticalDemoSpec,
 )
-from vei.whatif.filenames import CONTEXT_SNAPSHOT_FILE
 from vei.workspace.api import (
     activate_workspace_contract_variant,
     activate_workspace_scenario_variant,
@@ -227,7 +225,6 @@ def prepare_playable_workspace(
     fidelity = get_or_build_workspace_fidelity_report(workspace_root)
     state.metadata["fidelity_status"] = fidelity.status
     _write_playable_bundle(workspace_root, state)
-    _ensure_context_snapshot(workspace_root)
     return state
 
 
@@ -975,22 +972,6 @@ def _write_playable_bundle(root: Path, state: MissionSessionState) -> None:
         render_playable_overview(state),
         encoding="utf-8",
     )
-
-
-def _ensure_context_snapshot(workspace_root: Path) -> None:
-    """Write a minimal context_snapshot.json if one does not already exist."""
-    snapshot_path = workspace_root / CONTEXT_SNAPSHOT_FILE
-    if snapshot_path.exists():
-        return
-    manifest = load_workspace(workspace_root)
-    snapshot = ContextSnapshot(
-        organization_name=manifest.title or manifest.name,
-        organization_domain="",
-        captured_at=datetime.now(UTC).isoformat(),
-        metadata={"snapshot_role": "workspace_seed", "source": "playable"},
-    )
-    snapshot_path.write_text(snapshot.model_dump_json(indent=2), encoding="utf-8")
-    write_canonical_history_sidecars(snapshot, snapshot_path)
 
 
 def _build_workspace_session(

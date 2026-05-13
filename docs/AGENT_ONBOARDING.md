@@ -102,7 +102,10 @@ Eval runners:
 - `workflow` is the reference runner.
 - `scripted` is the deterministic floor baseline.
 - `bc` is the tool-frequency baseline powered by `FrequencyPolicy`.
-- `llm` runs a real model through the MCP world.
+- `llm` runs a real model through the MCP world. For `vei eval benchmark
+  --runner llm --family <family>`, VEI derives the task and argument anchors
+  from the family workflow, then reports both enterprise scoring and exact
+  workflow-contract validation.
 
 Same seed means same world. Determinism is part of the product. User-facing LLM
 generation defaults to the local Codex CLI using `gpt-5.3-codex-spark`; direct
@@ -137,6 +140,7 @@ of letting metadata become the real product contract.
 > This section covers the JEPA-style learned world model, strategic state points, leakage rules, and counterfactual workflows. Skip it if you're just getting started with the repo.
 >
 > For the canonical breakdown of what is learned vs. heuristic vs. external, see [ARCHITECTURE.md](ARCHITECTURE.md) § What Is and Isn't Learned.
+> For the training-loop diagram, target factory, and trust boundaries, see [WORLD_MODEL_TRAINING.md](WORLD_MODEL_TRAINING.md).
 
 ### Mental model
 
@@ -163,19 +167,19 @@ Build one pooled benchmark from all timestamp-ready tenants. Hold out the final 
 ```bash
 vei whatif benchmark build-multitenant \
   --input enron=_vei_out/enron/context_snapshot.json \
-  --input dispatch=_vei_out/dispatch/context_snapshot.json \
+  --input tenant_a=_vei_out/tenant_a/context_snapshot.json \
   --artifacts-root _vei_out/world_model_multitenant_jepa \
-  --label enron_dispatch \
+  --label enron_private_tenant \
   --candidate-mode template
 
 vei whatif benchmark train \
-  --root _vei_out/world_model_multitenant_jepa/enron_dispatch \
+  --root _vei_out/world_model_multitenant_jepa/enron_private_tenant \
   --model-id jepa_latent \
   --train-split train --train-split validation \
   --validation-split test
 
 vei whatif benchmark eval \
-  --root _vei_out/world_model_multitenant_jepa/enron_dispatch \
+  --root _vei_out/world_model_multitenant_jepa/enron_private_tenant \
   --model-id jepa_latent
 ```
 
@@ -187,7 +191,7 @@ Use strategic state-point runs when the user wants concrete choices a manager, e
 
 ```bash
 vei whatif benchmark strategic-state-points \
-  --input dispatch=_vei_out/datasets/dispatch_real/context_snapshot.json \
+  --input tenant_a=_vei_out/datasets/tenant_a/context_snapshot.json \
   --checkpoint _vei_out/world_model_multitenant_jepa/current/model_runs/jepa_latent/model.pt \
   --artifacts-root _vei_out/world_model_strategic_state_points \
   --label current_strategic_state_points \

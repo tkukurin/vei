@@ -11,8 +11,15 @@ from vei.benchmark.api import (
     list_default_benchmark_family_manifest,
     run_benchmark_case,
 )
-from vei.benchmark.models import BenchmarkCaseSpec
+from vei.benchmark.models import (
+    BenchmarkBatchResult,
+    BenchmarkBatchSummary,
+    BenchmarkCaseResult,
+    BenchmarkCaseSpec,
+    BenchmarkDemoSpec,
+)
 from vei.cli.vei_eval import app as eval_app
+from vei.cli.vei_eval import run_benchmark_demo
 from vei.cli.vei_train import bc as train_bc
 from vei.data.rollout import rollout_procurement
 
@@ -156,6 +163,114 @@ def test_benchmark_family_catalog_marks_clearwater_as_smoke_path() -> None:
 
     assert families["service_ops"].benchmark_role == "smoke"
     assert families["service_ops"].include_in_default_suite is False
+
+
+def test_vei_eval_benchmark_cli_preserves_requested_family_for_shared_scenario(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    captured: list[BenchmarkCaseSpec] = []
+
+    def fake_run_benchmark_batch(
+        specs: list[BenchmarkCaseSpec], *, run_id: str, output_dir: Path | None = None
+    ) -> BenchmarkBatchResult:
+        del output_dir
+        captured.extend(specs)
+        return BenchmarkBatchResult(run_id=run_id)
+
+    monkeypatch.setattr(
+        "vei.cli.vei_eval.run_benchmark_batch",
+        fake_run_benchmark_batch,
+    )
+    runner = typer.testing.CliRunner()
+
+    result = runner.invoke(
+        eval_app,
+        [
+            "benchmark",
+            "--runner",
+            "llm",
+            "--family",
+            "knowledge_authoring",
+            "--model",
+            "fake-gpt",
+            "--provider",
+            "openai",
+            "--artifacts-root",
+            str(tmp_path),
+            "--run-id",
+            "shared_family",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert len(captured) == 1
+    assert captured[0].family_name == "knowledge_authoring"
+    assert captured[0].workflow_name == "knowledge_authoring"
+    assert captured[0].workflow_variant == "northstar_proposal_drafting"
+    assert captured[0].scenario_name == "campaign_launch_guardrail"
+    assert captured[0].artifacts_dir == (
+        tmp_path / "shared_family" / "campaign_launch_guardrail"
+    )
+
+
+def test_vei_eval_demo_preserves_requested_family_for_shared_scenario(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    captured: list[BenchmarkCaseSpec] = []
+
+    def fake_run_benchmark_batch(
+        specs: list[BenchmarkCaseSpec], *, run_id: str, output_dir: Path | None = None
+    ) -> BenchmarkBatchResult:
+        del output_dir
+        captured.extend(specs)
+        return BenchmarkBatchResult(
+            run_id=run_id,
+            results=[
+                BenchmarkCaseResult(
+                    spec=specs[0],
+                    status="ok",
+                    success=True,
+                    score={"success": True, "composite_score": 1.0},
+                ),
+                BenchmarkCaseResult(
+                    spec=specs[1],
+                    status="ok",
+                    success=True,
+                    score={"success": True, "composite_score": 1.0},
+                ),
+            ],
+            summary=BenchmarkBatchSummary(
+                total_runs=2,
+                success_count=2,
+                success_rate=1.0,
+                average_composite_score=1.0,
+            ),
+        )
+
+    monkeypatch.setattr(
+        "vei.cli.vei_eval.run_benchmark_batch",
+        fake_run_benchmark_batch,
+    )
+
+    result = run_benchmark_demo(
+        BenchmarkDemoSpec(
+            family_name="knowledge_authoring",
+            compare_runner="llm",
+            compare_model="fake-gpt",
+            compare_provider="openai",
+            artifacts_root=tmp_path,
+            run_id="shared_family_demo",
+        )
+    )
+
+    assert result.family_name == "knowledge_authoring"
+    assert len(captured) == 2
+    assert [spec.runner for spec in captured] == ["workflow", "llm"]
+    for spec in captured:
+        assert spec.family_name == "knowledge_authoring"
+        assert spec.workflow_name == "knowledge_authoring"
+        assert spec.workflow_variant == "northstar_proposal_drafting"
+        assert spec.scenario_name == "campaign_launch_guardrail"
 
 
 def test_vei_eval_showcase_cli_creates_multi_example_bundle(tmp_path: Path) -> None:
