@@ -7,8 +7,6 @@ from vei.world.api import get_catalog_scenario
 
 pytestmark = pytest.mark.integration
 
-pytestmark = pytest.mark.integration
-
 
 def test_act_and_observe_basic():
     r = Router(seed=1, artifacts_dir=None)
