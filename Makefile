@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 PYTHON ?= python3.11
-# if you want to use uv, set `UV = uv`
+# if you want to use uv, set `?= uv`
 INSTALL_PREFIX ?= python -m
 VENV ?= .venv
 MODE ?= $(or $(AGENT_MODE),baseline)
